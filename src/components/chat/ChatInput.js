@@ -1,18 +1,38 @@
 "use client";
 import { useState, useRef } from "react";
 import { Send, Trash2, Mic, X } from "lucide-react";
-import { useChat } from "../../context/ChatContext";
+import { useCompanionStore } from "../../store/useCompanionStore";
+import { ChatService } from "../../services/ChatService";
 
 export default function ChatInput() {
   const [input, setInput] = useState("");
-  const[isListening, setIsListening] = useState(false);
-  const { therapyMode, isLoading, clearChat, sendMessage } = useChat();
+  const [isListening, setIsListening] = useState(false);
+  
+  const { addMessage, clearHistory, systemStatus, setSystemStatus, userEmotion } = useCompanionStore();
+  const isLoading = systemStatus?.includes("Processing") || systemStatus?.includes("Generating") || systemStatus?.includes("Speaking");
   const recognitionRef = useRef(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    sendMessage(input);
+    if (!input.trim() || isLoading) return;
+    
+    const userText = input.trim();
     setInput("");
+    
+    // V2 Neural execution path
+    addMessage({ role: 'user', content: userText });
+    setSystemStatus("Processing Text...");
+    
+    try {
+      // Pull absolute synchronous state natively inside the async loop
+      const currentHistory = useCompanionStore.getState().conversationHistory;
+      const aiResponseText = await ChatService.generateResponse(currentHistory, userEmotion || 'neutral');
+      
+      addMessage({ role: 'assistant', content: aiResponseText });
+      setSystemStatus("Idle");
+    } catch(err) {
+      setSystemStatus("Ollama Connection Error");
+    }
   };
 
   const handleVoiceInput = () => {
@@ -47,7 +67,7 @@ export default function ChatInput() {
         {/* Mobile Clear Chat */}
         <button 
           type="button" 
-          onClick={clearChat}
+          onClick={clearHistory}
           className="md:hidden p-3 rounded-xl bg-red-500/5 text-red-400/80 border border-red-500/20 hover:bg-red-500/20 transition-all flex items-center justify-center"
         >
           <Trash2 size={20} />
@@ -87,7 +107,7 @@ export default function ChatInput() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={`Message AI (${therapyMode.toUpperCase()} mode)...`}
+            placeholder={`Message AI locally...`}
             className="w-full bg-[#0f172a]/60 backdrop-blur-md border border-white/10 rounded-xl pl-5 pr-14 py-4 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500 text-gray-200 placeholder-gray-500 shadow-inner transition-all group-hover:border-white/20"
             disabled={isLoading || isListening}
           />

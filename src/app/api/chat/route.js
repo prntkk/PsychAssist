@@ -12,7 +12,23 @@ const CRISIS_KEYWORDS = ["kill myself", "suicide", "end it all", "want to die", 
 
 export async function POST(req) {
   try {
-    const { messages, mode = 'cbt' } = await req.json();
+    const { messages, mode = 'cbt', v2 } = await req.json();
+
+    // V2 Multi-modal Passthrough (Bypasses CORS restrictions on the browser securely)
+    if (v2) {
+      const v2Response = await fetch('http://localhost:11434/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gemma3:12b',
+          messages: messages,
+          stream: false,
+        }),
+      });
+      const v2Data = await v2Response.json();
+      return NextResponse.json(v2Data);
+    }
+
     const latestMessage = messages[messages.length - 1].content.toLowerCase();
 
     // Crisis Gate
@@ -30,7 +46,7 @@ export async function POST(req) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama3',
+        model: 'gemma3:12b',
         messages: [systemMessage, ...messages],
         stream: false, 
       }),

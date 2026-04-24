@@ -2,10 +2,12 @@
 import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { Sparkles } from "lucide-react";
-import { useChat } from "../../context/ChatContext";
+import { useCompanionStore } from "../../store/useCompanionStore";
 
 export default function ChatFeed() {
-  const { messages, isLoading } = useChat();
+  const messages = useCompanionStore((state) => state.conversationHistory);
+  const systemStatus = useCompanionStore((state) => state.systemStatus);
+  const isLoading = systemStatus?.includes("Processing") || systemStatus?.includes("Generating");
   
   // 1. Change the ref to target the scrollable container, not the bottom
   const containerRef = useRef(null);

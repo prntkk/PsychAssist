@@ -1,9 +1,11 @@
 "use client";
-import { BrainCircuit, Activity, Heart, ShieldAlert, Volume2, VolumeX, Plus } from "lucide-react";
+import { BrainCircuit, Activity, Heart, ShieldAlert, Volume2, VolumeX, Plus, Camera, CameraOff, Monitor, MonitorOff } from "lucide-react";
 import { useChat } from "../../context/ChatContext";
+import { useCompanionStore } from "../../store/useCompanionStore";
 
 export default function Sidebar() {
   const { therapyMode, setTherapyMode, moodTracker, handleMoodSelect, voiceEnabled, setVoiceEnabled, clearChat } = useChat();
+  const { showNeuralCore, setShowNeuralCore, showWebcam, setShowWebcam } = useCompanionStore();
 
   return (
     // Change ONLY the top wrapper tag in Sidebar.js to this:
@@ -56,6 +58,28 @@ export default function Sidebar() {
             </button>
           ))}
         </div>
+
+      <div className="mb-8 shrink-0 flex flex-col gap-2">
+        <h3 className="text-xs text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2 font-semibold">
+          <Monitor size={14} className="text-indigo-400" /> Neural Link Controls
+        </h3>
+        
+        <button 
+          onClick={() => setShowNeuralCore(!showNeuralCore)}
+          className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all duration-300 ${showNeuralCore ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'bg-[#0f172a]/50 border-white/10 text-gray-500 hover:text-gray-300'}`}
+        >
+          <span className="text-sm font-medium">Neural Core HUD</span>
+          {showNeuralCore ? <Monitor size={18} /> : <MonitorOff size={18} />}
+        </button>
+
+        <button 
+          onClick={() => setShowWebcam(!showWebcam)}
+          className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all duration-300 ${showWebcam ? 'bg-teal-500/10 border-teal-500/50 text-teal-300 shadow-[0_0_15px_rgba(20,184,166,0.2)]' : 'bg-[#0f172a]/50 border-white/10 text-gray-500 hover:text-gray-300'}`}
+        >
+          <span className="text-sm font-medium">Local Vision Node</span>
+          {showWebcam ? <Camera size={18} /> : <CameraOff size={18} />}
+        </button>
+      </div>
       </div>
 
       <div className="mb-8 shrink-0">
