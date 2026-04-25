@@ -5,97 +5,76 @@ import { useCompanionStore } from '../store/useCompanionStore';
 
 export function useContinuousVoice(onUserSpoke: (text: string) => void) {
   const { setIsListening, setAiIsSpeaking, setSystemStatus } = useCompanionStore();
-  const recognitionRef = useRef<any>(null);
-  const vadRef = useRef<any>(null);
-
   useEffect(() => {
-    // 1. Setup Speech Recognition (Browser Native STT)
-    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-
-      recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript.trim().length > 0) {
-          onUserSpoke(transcript);
-        }
-      };
-
-      recognitionRef.current.onerror = (e: any) => console.log('Speech Recognition Error:', e);
-    } else {
-      console.warn("Speech recognition not supported in this browser. Use Chrome/Edge.");
-    }
-
-    // 2. Setup Voice Activity Detection (VAD)
-    const initVAD = async () => {
-      try {
-        if (!(window as any).vad) {
-            console.error("VAD script not loaded yet from CDN.");
-            return;
-        }
-        vadRef.current = await (window as any).vad.MicVAD.new({
-          startOnLoad: true,
-          onSpeechStart: () => {
-            // INTERRUPT: Stop AI speaking if user starts talking
-            window.speechSynthesis.cancel();
-            setIsListening(true);
-            setAiIsSpeaking(false);
-            setSystemStatus('Listening...');
-          },
-          onSpeechEnd: (audio) => {
-            setIsListening(false);
-            setSystemStatus('Processing Audio...');
-            // Trigger text conversion
-            if (recognitionRef.current) {
-              try {
-                recognitionRef.current.start();
-              } catch (e) {
-                // Ignore if already started
-              }
-            }
-          },
-        });
-      } catch (e) {
-        console.error("VAD Error:", e);
-      }
-    };
-
-    initVAD();
-
     return () => {
-      if (vadRef.current) vadRef.current.pause();
       window.speechSynthesis.cancel(); // Stop talking on unmount
     };
-  }, [onUserSpoke]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // 3. Text-to-Speech Function
-  const speakText = (text: string) => {
-    if (!window.speechSynthesis) return;
-
-    window.speechSynthesis.cancel(); // clear queue
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    // Pick a nice, calm voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Google UK English Female'));
-    if (femaleVoice) utterance.voice = femaleVoice;
-
-    utterance.rate = 0.95; // Slightly slower, more calming
-    utterance.pitch = 1.0;
-
-    utterance.onstart = () => {
+  // 3. Text-to-Speech Function using ElevenLabs
+  const speakText = async (text: string) => {
+    try {
       setAiIsSpeaking(true);
       setSystemStatus('AI Speaking...');
-    };
-    utterance.onend = () => {
-      setAiIsSpeaking(false);
-      setSystemStatus('Idle');
-    };
 
-    window.speechSynthesis.speak(utterance);
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+
+      if (!response.ok) throw new Error("ElevenLabs TTS failed");
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      
+      audio.onended = () => {
+        setAiIsSpeaking(false);
+        setSystemStatus('Idle');
+      };
+      
+      audio.play();
+    } catch (e) {
+      console.error("ElevenLabs TTS Error (falling back to local):", e);
+      
+      // Fallback to local browser TTS
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices();
+        
+        // Find the absolute best cloud/neural voice available
+        const bestVoice = voices.find(v => 
+          (v.name.includes('Natural') || v.name.includes('Neural') || v.name.includes('Online')) && 
+          (v.name.includes('Female') || v.name.includes('Aria') || v.name.includes('Sonia') || v.name.includes('Jenny'))
+        ) 
+        || voices.find(v => v.name.includes('Google UK English Female') || v.name.includes('Samantha') || v.name.includes('Google US English'))
+        || voices.find(v => v.name.includes('Female'));
+
+        if (bestVoice) utterance.voice = bestVoice;
+        utterance.rate = 0.95;
+        
+        utterance.onstart = () => {
+          setAiIsSpeaking(true);
+          setSystemStatus('AI Speaking (Fallback)...');
+        };
+        utterance.onend = () => {
+          setAiIsSpeaking(false);
+          setSystemStatus('Idle');
+        };
+        
+        window.speechSynthesis.speak(utterance);
+      } else {
+        setAiIsSpeaking(false);
+        setSystemStatus('Idle');
+      }
+    }
   };
+
+  useEffect(() => {
+    (window as any)._speakText = speakText;
+  }, [speakText]);
 
   return { speakText };
 }
