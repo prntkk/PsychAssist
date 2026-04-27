@@ -6,48 +6,45 @@ import ChatFeed from "../chat/ChatFeed";
 import ChatInput from "../chat/ChatInput";
 import CrisisAlert from "../CrisisAlert";
 import CompanionAgent from "../CompanionAgent";
-import dynamic from "next/dynamic";
 import { useCompanionStore } from "../../store/useCompanionStore";
-
-const DynamicOrbScene = dynamic(() => import("../3d/ReactiveOrbScene"), { ssr: false });
+import VoiceModeOverlay from "../chat/VoiceModeOverlay";
 
 export default function MainApp() {
-  const { isClient, showCrisisAlert, sentiment } = useChat();
-  const { aiIsSpeaking, userEmotion } = useCompanionStore();
+  const { isClient, showCrisisAlert } = useChat();
+  const { showWebcam } = useCompanionStore();
 
   if (!isClient) return null;
 
-  const glowColors = {
-    neutral: "from-teal-500/20 to-cyan-500/20",
-    stressed: "from-red-500/20 to-orange-500/20",
-    sad: "from-blue-500/20 to-indigo-500/20",
-    calm: "from-emerald-500/20 to-teal-500/20"
-  };
-
   return (
-    <div className="flex h-[100dvh] w-screen bg-[#050810] text-gray-200 font-sans overflow-hidden relative">
-      
-      {/* Ambient Backgrounds */}
-      <div className={`absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-gradient-to-br ${glowColors[sentiment]} rounded-full blur-[120px] pointer-events-none mix-blend-screen animate-breathe transition-colors duration-1000`}></div>
-      <div className={`absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-gradient-to-tl from-blue-600/10 to-purple-600/10 rounded-full blur-[100px] pointer-events-none mix-blend-screen animate-breathe transition-colors duration-1000`} style={{ animationDelay: '5s' }}></div>
-      <div className="absolute inset-0 bg-[url('https://transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none"></div>
+    <div className="flex h-[100dvh] w-screen text-gray-200 font-sans overflow-hidden relative" style={{ background: "#04060f" }}>
 
-      {/* 3D Visualizer Background (Client-Side Only) */}
-      <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-center opacity-60 mix-blend-screen">
-        <DynamicOrbScene emotion={userEmotion} isProcessing={false} isSpeaking={aiIsSpeaking} />
+      {/* ── Premium Aurora Background ── */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 80% 60% at 20% 10%, rgba(15,40,80,0.65) 0%, transparent 70%)' }} />
+        <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 70% 55% at 85% 90%, rgba(8,20,50,0.75) 0%, transparent 70%)' }} />
+        <div className="aurora-blob aurora-1" />
+        <div className="aurora-blob aurora-2" />
       </div>
+
 
       <CompanionAgent />
 
-      {showCrisisAlert && <CrisisAlert onClose={() => setShowCrisisAlert(false)} />}
-      
+      {showCrisisAlert && <CrisisAlert onClose={() => {}} />}
+
+      {/* Sidebar always sits above overlay (z-50) */}
       <Sidebar />
 
-      {/* Main Column - Forced to stay inside the screen */}
+      {/* Main chat column — overlay lives here so sidebar stays unblocked */}
       <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-10">
         <TopNavigation />
-        <ChatFeed />
-        <ChatInput />
+        {showWebcam ? (
+          <VoiceModeOverlay />
+        ) : (
+          <>
+            <ChatFeed />
+            <ChatInput />
+          </>
+        )}
       </main>
     </div>
   );

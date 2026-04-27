@@ -6,7 +6,7 @@ import { ChatService } from "../../services/ChatService";
 
 export default function ChatInput() {
   const [input, setInput] = useState("");
-  const { addMessage, clearHistory, systemStatus, setSystemStatus, userEmotion, isListening } = useCompanionStore();
+  const { addMessage, clearHistory, systemStatus, setSystemStatus, userEmotion, isListening, setIsListening } = useCompanionStore();
   const isLoading = systemStatus?.includes("Processing") || systemStatus?.includes("Generating") || systemStatus?.includes("Speaking");
 
   const [isMicActive, setIsMicActive] = useState(false);
@@ -52,6 +52,7 @@ export default function ChatInput() {
         recognitionRef.current.stop();
       }
       setIsMicActive(false);
+      setIsListening(false); // Sync global state
       setVoiceReviewActive(true);
       return;
     }
@@ -66,7 +67,10 @@ export default function ChatInput() {
     
     let finalTranscript = input;
 
-    recognition.onstart = () => setIsMicActive(true);
+    recognition.onstart = () => {
+      setIsMicActive(true);
+      setIsListening(true); // Sync global state
+    };
     
     recognition.onresult = (e) => {
       let interimTranscript = "";
@@ -80,8 +84,16 @@ export default function ChatInput() {
       setInput(finalTranscript + interimTranscript);
     };
     
-    recognition.onerror = () => { setIsMicActive(false); setVoiceReviewActive(true); };
-    recognition.onend = () => { setIsMicActive(false); setVoiceReviewActive(true); };
+    recognition.onerror = () => { 
+      setIsMicActive(false); 
+      setIsListening(false); // Sync global state
+      setVoiceReviewActive(true); 
+    };
+    recognition.onend = () => { 
+      setIsMicActive(false); 
+      setIsListening(false); // Sync global state
+      setVoiceReviewActive(true); 
+    };
     
     recognition.start();
   };

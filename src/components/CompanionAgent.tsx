@@ -55,69 +55,79 @@ export default function CompanionAgent() {
   if (!shouldRenderHUD && !shouldRenderCamera) return null;
 
   return (
-    <motion.div 
-      drag 
-      dragMomentum={false}
-      whileHover={{ scale: 1.02 }}
-      whileDrag={{ scale: 1.05, cursor: "grabbing" }}
-      className="absolute bottom-8 left-8 w-[340px] z-50 flex flex-col gap-4 drop-shadow-2xl pointer-events-auto cursor-grab"
-    >
-      
-      {/* Status Panel (Neural Link) */}
+    <>
+      {/* ── Neural Core HUD — bottom-left ── */}
       {shouldRenderHUD && (
-        <div className="glass-panel p-5 rounded-2xl border border-white/10 bg-[#0A0F1A]/80 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.6)] relative overflow-hidden group">
-          
-          {/* Animated glow based on status */}
-          <div className={`absolute -inset-10 opacity-30 blur-[80px] transition-colors duration-1000 pointer-events-none
-            ${isListening ? 'bg-teal-500' : aiIsSpeaking ? 'bg-indigo-500' : 'bg-transparent'}`} />
+        <motion.div
+          drag
+          dragMomentum={false}
+          whileDrag={{ scale: 1.04, cursor: 'grabbing' }}
+          className="absolute bottom-8 left-8 w-[280px] z-50 drop-shadow-2xl pointer-events-auto cursor-grab"
+        >
+          <div className="glass-panel p-5 rounded-2xl border border-white/10 bg-[#0A0F1A]/80 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.6)] relative overflow-hidden">
+            <div className={`absolute -inset-10 opacity-30 blur-[80px] transition-colors duration-1000 pointer-events-none
+              ${isListening ? 'bg-teal-500' : aiIsSpeaking ? 'bg-indigo-500' : 'bg-transparent'}`} />
 
-          <div className="relative z-10 flex items-center justify-between">
-            <h2 className="text-sm font-bold tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">
-              Neural Core
-            </h2>
-            <span className="flex h-2.5 w-2.5 relative">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${systemStatus?.includes('Error') ? 'bg-red-400' : 'bg-teal-400'}`}></span>
-              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${systemStatus?.includes('Error') ? 'bg-red-500' : 'bg-teal-500'}`}></span>
-            </span>
-          </div>
+            <div className="relative z-10 flex items-center justify-between">
+              <h2 className="text-sm font-bold tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">
+                Neural Core
+              </h2>
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${systemStatus?.includes('Error') ? 'bg-red-400' : 'bg-teal-400'}`} />
+                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${systemStatus?.includes('Error') ? 'bg-red-500' : 'bg-teal-500'}`} />
+              </span>
+            </div>
 
-          <div className="relative z-10 mt-3 flex items-center gap-2 text-xs text-gray-300 font-mono bg-black/30 p-2 rounded-lg border border-white/5">
-            <div className={`w-1.5 h-1.5 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`} />
-            {systemStatus || 'System Initializing...'}
-          </div>
+            <div className="relative z-10 mt-3 flex items-center gap-2 text-xs text-gray-300 font-mono bg-black/30 p-2 rounded-lg border border-white/5">
+              <div className={`w-1.5 h-1.5 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`} />
+              {systemStatus || 'System Initializing...'}
+            </div>
 
-          <div className="relative z-10 mt-3 inline-flex items-center justify-between w-full text-[10px] uppercase tracking-widest text-gray-400">
-            <span>Detected State:</span>
-            <span className={`font-bold px-2 py-0.5 rounded
-              ${userEmotion === 'neutral' ? 'bg-gray-800 text-gray-300' : 
-                userEmotion === 'happy' ? 'bg-teal-900/50 text-teal-300 border border-teal-500/30' : 
-                userEmotion === 'sad' ? 'bg-blue-900/50 text-blue-300 border border-blue-500/30' : 
-                'bg-indigo-900/50 text-indigo-300 border border-indigo-500/30'}`}>
-              {userEmotion || 'Detecting...'}
-            </span>
+            <div className="relative z-10 mt-3 inline-flex items-center justify-between w-full text-[10px] uppercase tracking-widest text-gray-400">
+              <span>Detected State:</span>
+              <span className={`font-bold px-2 py-0.5 rounded
+                ${userEmotion === 'neutral' ? 'bg-gray-800 text-gray-300' :
+                  userEmotion === 'happy' ? 'bg-teal-900/50 text-teal-300 border border-teal-500/30' :
+                  userEmotion === 'sad' ? 'bg-blue-900/50 text-blue-300 border border-blue-500/30' :
+                  'bg-indigo-900/50 text-indigo-300 border border-indigo-500/30'}`}>
+                {userEmotion || 'Detecting...'}
+              </span>
+            </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* Camera Feed Context Node */}
+      {/* ── Camera PIP — top-right corner by default ── */}
       {shouldRenderCamera && (
-        <div className="glass-panel h-36 rounded-2xl border border-white/10 bg-black backdrop-blur-md overflow-hidden shadow-2xl relative flex items-center justify-center isolate">
-          <video
-            ref={videoRef}
-            className="absolute w-full h-full object-cover opacity-[0.35] scale-x-[-1] contrast-125 saturate-50 mix-blend-screen"
-            muted
-            playsInline
-          />
-          {/* CRT Scanline overlay effect */}
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] pointer-events-none"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
-          <p className="absolute bottom-3 left-4 text-[10px] font-mono text-teal-400 tracking-widest uppercase drop-shadow-md">Local Vision Tensor Active</p>
-          {isListening && (
-              <div className="absolute inset-0 border-2 border-teal-500/20 animate-pulse rounded-2xl pointer-events-none"></div>
-          )}
-        </div>
+        <motion.div
+          drag
+          dragMomentum={false}
+          dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
+          dragElastic={0}
+          whileDrag={{ scale: 1.04, cursor: 'grabbing' }}
+          initial={{ x: 0, y: 0 }}
+          className="absolute z-50 pointer-events-auto cursor-grab"
+          style={{ top: '16px', right: '16px', left: 'auto' }}
+        >
+          <div
+            className="rounded-2xl border border-white/10 bg-black overflow-hidden shadow-2xl relative flex items-center justify-center isolate"
+            style={{ width: '220px', height: '220px', resize: 'both', overflow: 'hidden', minWidth: '140px', minHeight: '140px' }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <video
+              ref={videoRef}
+              className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+              muted
+              playsInline
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none" />
+            <p className="absolute bottom-2 left-3 text-[9px] font-mono text-teal-400 tracking-widest uppercase drop-shadow-md pointer-events-none">Conversation Mode</p>
+            {isListening && (
+              <div className="absolute inset-0 border-2 border-teal-500/30 animate-pulse rounded-2xl pointer-events-none" />
+            )}
+          </div>
+        </motion.div>
       )}
-
-    </motion.div>
+    </>
   );
 }

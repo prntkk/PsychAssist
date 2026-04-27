@@ -41,7 +41,7 @@ export const useCompanionStore = create<CompanionState>((set) => ({
   userEmotion: 'neutral',
   isCameraActive: false,
   showNeuralCore: true,
-  showWebcam: true,
+  showWebcam: false,
   conversationHistory: [],
 
   setIsListening: (status) => set({ isListening: status }),

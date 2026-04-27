@@ -1,17 +1,33 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCompanionStore } from '../store/useCompanionStore';
 
 export function useContinuousVoice(onUserSpoke: (text: string) => void) {
   const { setIsListening, setAiIsSpeaking, setSystemStatus } = useCompanionStore();
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
   useEffect(() => {
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      if (availableVoices.length > 0) {
+        setVoices(availableVoices);
+      }
+    };
+
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
     return () => {
-      window.speechSynthesis.cancel(); // Stop talking on unmount
+      window.speechSynthesis.cancel();
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
     };
   }, []);
 
-  // 3. Text-to-Speech Function using ElevenLabs
   const speakText = async (text: string) => {
     try {
       setAiIsSpeaking(true);
@@ -23,7 +39,10 @@ export function useContinuousVoice(onUserSpoke: (text: string) => void) {
         body: JSON.stringify({ text })
       });
 
-      if (!response.ok) throw new Error("ElevenLabs TTS failed");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "ElevenLabs TTS failed");
+      }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -34,30 +53,30 @@ export function useContinuousVoice(onUserSpoke: (text: string) => void) {
         setSystemStatus('Idle');
       };
       
-      audio.play();
+      await audio.play();
     } catch (e) {
-      console.error("ElevenLabs TTS Error (falling back to local):", e);
+      console.warn("ElevenLabs TTS unavailable, using local fallback.", e);
       
-      // Fallback to local browser TTS
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        const voices = window.speechSynthesis.getVoices();
         
-        // Find the absolute best cloud/neural voice available
-        const bestVoice = voices.find(v => 
+        // Use the voices state we maintained
+        const currentVoices = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
+        
+        const bestVoice = currentVoices.find(v => 
           (v.name.includes('Natural') || v.name.includes('Neural') || v.name.includes('Online')) && 
           (v.name.includes('Female') || v.name.includes('Aria') || v.name.includes('Sonia') || v.name.includes('Jenny'))
         ) 
-        || voices.find(v => v.name.includes('Google UK English Female') || v.name.includes('Samantha') || v.name.includes('Google US English'))
-        || voices.find(v => v.name.includes('Female'));
+        || currentVoices.find(v => v.name.includes('Google UK English Female') || v.name.includes('Samantha') || v.name.includes('Google US English'))
+        || currentVoices.find(v => v.name.includes('Female'));
 
         if (bestVoice) utterance.voice = bestVoice;
-        utterance.rate = 0.95;
+        utterance.rate = 1.0;
         
         utterance.onstart = () => {
           setAiIsSpeaking(true);
-          setSystemStatus('AI Speaking (Fallback)...');
+          setSystemStatus('AI Speaking (Local)...');
         };
         utterance.onend = () => {
           setAiIsSpeaking(false);
